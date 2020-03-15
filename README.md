@@ -3,6 +3,10 @@
 
 https://chrome.google.com/webstore/detail/cross-request/cmnlfmgbjmaciiopcgodlhpiklaghbok?hl=en-US
 
+### 加载 cookie
+
+如果指定了 host 且没指定 cookie 默认加载浏览器自身 cookie
+
 ### Api
 crossRequest( options )
 

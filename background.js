@@ -226,31 +226,14 @@ function sendAjax(req, successFn, errorFn) {
 			req.data = JSON.stringify(req.data);
 		}
 	}else{
-    delete req.headers['Content-Type'];
-  }
+    	delete req.headers['Content-Type'];
+  	}
 	if (req.query && typeof req.query === 'object') {
 		var getUrl = formUrlencode(req.query);
 		req.url = req.url + '?' + getUrl;
 		req.query = '';
 	}
 	xhr.open(req.method, req.url, req.async);
-	var response = {};
-	if (req.headers) {
-		var unsafeHeaderArr = [];
-		for (var name in req.headers) {
-			if (unsafeHeader.indexOf(name) > -1) {
-				unsafeHeaderArr.push({
-					name: name,
-					value: req.headers[name]
-				})
-			} else {
-				xhr.setRequestHeader(name, req.headers[name]);
-			}
-		}
-		if (unsafeHeaderArr.length > 0) {
-			xhr.setRequestHeader('cross-request-unsafe-headers-list', encode(unsafeHeaderArr));
-		}
-	}
 
 	xhr.setRequestHeader('cross-request-open-sign', '1')
 
@@ -288,13 +271,75 @@ function sendAjax(req, successFn, errorFn) {
 		})
 	};
 	xhr.upload.onprogress = function (e) { };
+	
+	var needWait = false;
+	var response = {};
+		
+	var unsafeHeaderArr = [];
+	for (var name in req.headers) {
+		if(name == 'Host' && req.headers['Cookie'] == undefined) {
+			needWait = true;
+			var cookieHost = req.headers[name].substr(req.headers[name].indexOf(".") + 1);
+			chrome.cookies.getAll({
+				domain: cookieHost
+			}, function(cookies) {
+				if(cookies != undefined) {
+					var cookieHeader = "";
+					for(var i = 0; i < cookies.length; i ++) {
+						cookieHeader = cookieHeader + cookies[i].name + "=" + cookies[i].value + "; ";
+					}
+					req.headers['Cookie'] = cookieHeader;
+					console.log('after cookie:', req.headers)
+				}
+				for (var name in req.headers) {
+					if (unsafeHeader.indexOf(name) > -1) {
+						unsafeHeaderArr.push({
+							name: name,
+							value: req.headers[name]
+						})
+					} else {
+						xhr.setRequestHeader(name, req.headers[name]);
+					}
+				}
+				
+				if (unsafeHeaderArr.length > 0) {
+					xhr.setRequestHeader('cross-request-unsafe-headers-list', encode(unsafeHeaderArr));
+				}
+				try {
+					xhr.send(req.data);
+				} catch (error) {
+					errorFn({
+						body: error.message
+					})
+				}
+			})
+		}		
+	}
 
-	try {
-		xhr.send(req.data);
-	} catch (error) {
-		errorFn({
-			body: error.message
-		})
+	if(!needWait) {
+		console.log('before send:', req.headers)
+		for (var name in req.headers) {
+			if (unsafeHeader.indexOf(name) > -1) {
+				unsafeHeaderArr.push({
+					name: name,
+					value: req.headers[name]
+				})
+			} else {
+				xhr.setRequestHeader(name, req.headers[name]);
+			}
+		}
+		
+		if (unsafeHeaderArr.length > 0) {
+			xhr.setRequestHeader('cross-request-unsafe-headers-list', encode(unsafeHeaderArr));
+		}
+		console.log("just request", unsafeHeaderArr)
+		try {
+			xhr.send(req.data);
+		} catch (error) {
+			errorFn({
+				body: error.message
+			})
+		}
 	}
 }
 
@@ -358,18 +403,19 @@ function ensureItem(arr, name, value) {
 
 function requestListener (details) {
 	var find = false;
-	details.requestHeaders.forEach(function (item, index) {
+	for(var index = details.requestHeaders.length - 1; index >=0 ; index --) {
+		var item = details.requestHeaders[index];
 		if (item.name === 'cross-request-open-sign' && item.value == '1') {
 			requestBatch[details.requestId] = true;
 		}
 		if (item.name === 'cross-request-unsafe-headers-list') {
 			var val = decode(item.value);
 			val.forEach(function (v) {
-				details.requestHeaders = ensureItem(details.requestHeaders, v.name, v.value)
+				details.requestHeaders = ensureItem(details.requestHeaders, v.name, v.value);
 			})
+			details.requestHeaders.splice(index, 1);
 		}
-	})
-
+	}
 	return { requestHeaders: details.requestHeaders };
 }
 
