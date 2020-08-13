@@ -8,52 +8,47 @@ function generateHtml(url) {
 }
 
 
-// var key = 'y_request_allow_urls';
+var key = 'y_request_allow_urls';
 
-// var urls = chrome.runtime.sendMessage({action:'get', name: key}, function(urls){
-//   var urlDom = $('#urls');
-//   try{
-//     urls = JSON.parse(urls);
-//   }catch(e){
-//     urls = null;
-//   }
+var urls = chrome.runtime.sendMessage({action:'get', name: key}, function(urls){
+  var urlDom = $('#urls');
+  try{
+    urls = JSON.parse(urls);
+  }catch(e){
+    urls = null;
+  }
   
-//   if(!urls ||  Object.keys(urls).length === 0){
-//     urls = { '*': true};
-//     chrome.runtime.sendMessage({action:'set', name: key, value: JSON.stringify(urls)})
-//   }
+  if(!urls ||  Object.keys(urls).length === 0){
+    urls = { '*': true};
+    chrome.runtime.sendMessage({action:'set', name: key, value: JSON.stringify(urls)})
+  }
 
-//   for (var url in urls) {
-//     urlDom.append(generateHtml(url));
-//   }
+  for (var url in urls) {
+    urlDom.append(generateHtml(url));
+  }
 
-//   $('#add .submit').bind('click', function () {    
-//     var val = $('#add input').val()
-//     if (val) urls[val] = true;
-//     chrome.runtime.sendMessage({
-//       action:'set',
-//       name: key,
-//       value: JSON.stringify(urls)
-//     })
+  $('#add .submit').bind('click', function () {    
+    var val = $('#add input').val()
+    if (val) urls[val] = true;
+    chrome.runtime.sendMessage({
+      action:'set',
+      name: key,
+      value: JSON.stringify(urls)
+    })
     
-//     urlDom.append(generateHtml(val))
-//   })
+    urlDom.append(generateHtml(val))
+  })
 
-//   urlDom.on('click', '.del', function (event) {
-//     var p = event.target.parentNode;
-//     var url = $(p).find('.url').text();
-//     delete urls[url]
+  urlDom.on('click', '.del', function (event) {
+    var p = event.target.parentNode;
+    var url = $(p).find('.url').text();
+    delete urls[url]
 
-//     chrome.runtime.sendMessage({
-//       action:'set',
-//       name: key,
-//       value: JSON.stringify(urls)
-//     })
-//     p.parentNode.removeChild(p)
-//   })
-// });
-
-chrome.tabs.create({
-  url: "http://api.lzxz1234.cn:1107/", 
-  active: true
+    chrome.runtime.sendMessage({
+      action:'set',
+      name: key,
+      value: JSON.stringify(urls)
+    })
+    p.parentNode.removeChild(p)
+  })
 });
